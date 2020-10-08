@@ -72,10 +72,9 @@ var app = {
         filters: [{
           // services: [saferMeService]
           services: ['battery_service'],
-          optionalServices: [0xffa1],
         }],
         // acceptAllDevices: true,
-        // optionalServices: [saferMeService],
+        optionalServices: [saferMeService],
       })
       this.device = device;
       $('device-paired').innerHTML = `${device.name} (${device.id})`;
