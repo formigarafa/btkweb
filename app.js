@@ -71,7 +71,8 @@ var app = {
       const device = await navigator.bluetooth.requestDevice({
         filters: [{
           // services: [saferMeService]
-          services: ['battery_service']
+          services: ['battery_service'],
+          optionalServices: [0xffa1],
         }],
         // acceptAllDevices: true,
         // optionalServices: [saferMeService],
