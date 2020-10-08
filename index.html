@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SaferMe Wearable Client</title>
+  <script src="app.js"></script>
+  <style type="text/css">
+    .step {
+      border-bottom: 2px solid #444;
+      margin: 10px 0;
+      padding: 10px 0;
+    }
+  </style>
+</head>
+<body onload="app.init()">
+  <div class="step">
+    <div id="login-form">
+      <form onsubmit="app.signIn(event); return false">
+        <label>Email</label>
+        <input type="text" name="email">
+        <label>Password</label>
+        <input type="password" name="password">
+        <button type="submit" name="signinbtn">Sign In</button>
+      </form>
+    </div>
+
+    <div id="session" hidden>
+      <button type="button" onclick="app.logout()">Logout</button>
+      <div id="session-data"></div>
+    </div>
+
+  </div>
+
+  <div class="step">
+    <button type="button" onclick="app.pair()">Pair device</button>
+    <div>
+      Device:
+      <div id="device-paired">
+      </div>
+    </div>
+
+    <div>
+      Connected:
+      <div id="device-connected">
+      </div>
+    </div>
+
+    <div>
+      Battery Level:
+      <div id="battery-level">
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <button type="button" onclick="app.requestStatusUpdate()">Refresh</button>
+    Btk Status:
+    <pre id="btk-status">
+    </pre>
+  </div>
+
+  <div class="step">
+    <button type="button" onclick="app.syncBtk()">Activate</button>
+    <button type="button" onclick="app.unsyncBtk()">Dectivate</button>
+  </div>
+</body>
+</html>
