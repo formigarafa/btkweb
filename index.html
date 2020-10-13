@@ -4,6 +4,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SaferMe Wearable Client</title>
   <script src="app.js"></script>
+
   <style type="text/css">
     .step {
       border-bottom: 2px solid #444;
@@ -25,38 +26,40 @@
     </div>
 
     <div id="session" hidden>
-      <button type="button" onclick="app.logout()">Logout</button>
       <div id="session-data"></div>
+      <button type="button" onclick="app.logout()">Logout</button>
     </div>
 
   </div>
 
   <div class="step">
-    <button type="button" onclick="app.pair()">Pair device</button>
     <div>
       Device:
-      <div id="device-paired">
-      </div>
+      <span id="device-paired">
+      </span>
     </div>
 
     <div>
       Connected:
-      <div id="device-connected">
-      </div>
-    </div>
-
-    <div>
-      Battery Level:
-      <div id="battery-level">
-      </div>
+      <span id="device-connected">
+      </span>
     </div>
   </div>
 
   <div class="step">
-    <button type="button" onclick="app.requestStatusUpdate()">Refresh</button>
+    <div>
+      Battery Level:
+      <span id="battery-level">
+      </span>
+    </div>
+    <button type="button" onclick="app.reloadBatteryInfo()">Refresh</button>
+  </div>
+
+  <div class="step">
     Btk Status:
     <pre id="btk-status">
     </pre>
+    <button type="button" onclick="app.requestStatusUpdate()">Refresh</button>
   </div>
 
   <div class="step">
