@@ -1,4 +1,5 @@
 var saferMeService = 0xffa1;
+
 function $(x) {
   return document.getElementById(x);
 }
@@ -65,42 +66,59 @@ var app = {
     `;
   },
 
-  async pair() {
-    try {
-      log('Requesting any Bluetooth Device...');
-      const device = await navigator.bluetooth.requestDevice({
-        filters: [{
-          // services: [saferMeService]
-          services: ['battery_service'],
-        }],
-        // acceptAllDevices: true,
-        optionalServices: [saferMeService],
-      })
-      this.device = device;
-      $('device-paired').innerHTML = `${device.name} (${device.id})`;
-    }
-    catch(error) {
-      console.error(error);
+  async fetchDevice() {
+    if (this.device) {
+      return this.device;
     }
 
-    try {
-      log('Connecting to GATT Server...');
-      const server = await this.device.gatt.connect();
-      this.server = server;
-      $('device-connected').innerHTML = `Yes`;
-    }
-    catch (error) {
-      console.error(error);
-    }
+    log('Requesting any Bluetooth Device...');
+    const device = await navigator.bluetooth.requestDevice({
+      filters: [{
+        services: [saferMeService],
+      }],
+      optionalServices: ['battery_service'],
+    })
+    this.device = device;
+    $('device-paired').innerHTML = `${device.name} (${device.id})`;
+    return this.device;
+  },
 
-    try {
-      log('Getting Battery Service...');
-      const service = await this.server.getPrimaryService('battery_service');
-      this.battery_service = service;
+  async fetchServer() {
+    if (this.server) {
+      return this.server;
     }
-    catch (error) {
-      console.error(error);
+    log('Connecting to GATT Server...');
+    const device = await this.fetchDevice();
+    const server = await device.gatt.connect();
+    this.server = server;
+    $('device-connected').innerHTML = `Yes`;
+    return this.server;
+  },
+
+  async fetchBatteryService() {
+    if (this.batteryService) {
+      return this.batteryService;
     }
+    log('Getting Battery Service...');
+    const server = await this.fetchServer();
+    const service = await server.getPrimaryService('battery_service');
+    this.batteryService = service;
+    return this.batteryService
+  },
+
+  async fetchBatteryLevelChar() {
+    if (this.batteryLevelChar) {
+      return this.batteryLevelChar;
+    }
+    log('Getting Battery Characteristic...');
+    const batteryService = await this.fetchBatteryService();
+    const characteristic = await batteryService.getCharacteristic('battery_level');
+    this.batteryLevelChar = characteristic;
+    return this.batteryLevelChar
+  },
+
+  async reloadBatteryInfo() {
+    const server = await this.fetchServer();
 
     const handleBatteryLevelChanged = (event) => {
       console.log("batery: ", event);
@@ -110,14 +128,12 @@ var app = {
 
     try {
       log('Getting Battery Characteristic...');
-      const characteristic = await this.battery_service.getCharacteristic('battery_level');
-      this.characteristic = characteristic;
+      const batteryLevelChar = await this.fetchBatteryLevelChar();
 
-      characteristic.startNotifications();
+      batteryLevelChar.startNotifications();
+      batteryLevelChar.addEventListener('characteristicvaluechanged', handleBatteryLevelChanged);
 
-      characteristic.addEventListener('characteristicvaluechanged', handleBatteryLevelChanged);
-
-      const reading = await characteristic.readValue();
+      const reading = await batteryLevelChar.readValue();
       const batteryLevelDec = reading.getUint8(0);
       $('battery-level').innerHTML = `${batteryLevelDec}%`;
     }
@@ -126,52 +142,50 @@ var app = {
     }
   },
 
-  async loadContactLogService() {
-    if (!this.contact_log_service) {
-      try {
-        log('Getting Contact Log Service...');
-        const service = await this.server.getPrimaryService(0xffa1);
-        this.contact_log_service = service;
-      }
-      catch (error) {
-        console.error(error);
-      }
+  async fetchContactLogService() {
+    if (this.contactLogService) {
+      return this.contactLogService;
     }
-    return this.contact_log_service;
+    log('Getting Contact Log Service...');
+    const server = await this.fetchServer();
+    const service = await server.getPrimaryService(saferMeService);
+    this.contactLogService = service;
+    return this.contactLogService;
   },
 
+  async fetchActivationChar() {
+    if (this.activationChar) {
+      return this.activationChar;
+    }
+    log('Getting Activation Characteristic...');
+    const service = await this.fetchContactLogService();
+    const characteristic = await service.getCharacteristic('24fd71a0-2008-4c9e-9ea2-e19402dc51e2');
+    this.activationChar = characteristic;
+    return this.activationChar;
+  },
+
+  async fetchStatusChar() {
+    if (this.statusChar) {
+      return this.statusChar;
+    }
+    log('Getting Status Characteristic...');
+    const service = await this.fetchContactLogService();
+    const characteristic = await service.getCharacteristic('24fd719f-2008-4c9e-9ea2-e19402dc51e2');
+    this.statusChar = characteristic;
+    return this.statusChar;
+  },
 
   async requestStatusUpdate() {
-    await this.sendActivation("upst:a")
+    await this.sendActivation("upst");
 
-    // const handleStatusChanged = (event) => {
-    //   console.log("status: ", event);
-    //   const status = event.target.value.getUint8(0);
-    //   $('btk-status').innerHTML = `${status}%`;
-    // };
+    const statusChar = await this.fetchStatusChar();
 
-    if (!this.statusCharacteristic) {
-      try {
-        log('Getting Status Characteristic...');
-        this.statusCharacteristic = await this.contact_log_service.getCharacteristic('24fd719f-2008-4c9e-9ea2-e19402dc51e2');
-      }
-      catch (e) {
-        console.error(e);
-      }
-    }
+    // statusChar.startNotifications();
+    // statusChar.addEventListener('characteristicvaluechanged', handleStatusChanged);
 
-    // this.statusCharacteristic.startNotifications();
-
-    // this.statusCharacteristic.addEventListener('characteristicvaluechanged', handleStatusChanged);
-
-    try {
-      const reading = await this.statusCharacteristic.readValue();
-      const status = new TextDecoder('utf-8').decode(reading)
-      $('btk-status').innerHTML = status;
-    }
-    catch (error) {
-      console.error(error);
-    }
+    const reading = await statusChar.readValue();
+    const status = new TextDecoder('utf-8').decode(reading)
+    $('btk-status').innerHTML = status;
   },
 
   async syncBtk() {
@@ -184,26 +198,8 @@ var app = {
   },
 
   async sendActivation(activation) {
-    await this.loadContactLogService();
-
-    if (!this.activationCharacteristic) {
-      try {
-        log('Getting Activation Characteristic...');
-        this.activationCharacteristic = await this.contact_log_service.getCharacteristic('24fd71a0-2008-4c9e-9ea2-e19402dc51e2');
-      }
-      catch (e) {
-        console.error(e);
-      }
-    }
-
-    try {
-      const msg = new TextEncoder('utf-8').encode(activation)
-      return await this.activationCharacteristic.writeValue(msg);
-    }
-    catch (error) {
-      console.error(error);
-    }
-
+    const characteristic = await this.fetchActivationChar();
+    const msg = new TextEncoder('utf-8').encode(activation);
+    return await characteristic.writeValue(msg);
   },
-
 }
